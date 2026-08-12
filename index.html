@@ -461,8 +461,8 @@ function refillThemes(){
 }
 refillTracks(); refillThemes();
 
-// 首次打开（本地无数据）才载入示例；放在 themeList 声明之后，避免初始化时 TDZ 报错导致整页脚本中断
-if(!localStorage.getItem(KEY)){ loadDemo(); }
+// 首次打开不再自动塞示例：任何设备第一次打开都是干净空表；想看演示点「🎬 载入示例数据」即可
+
 
 // 录入即学习：点入库 -> 主题立即建立并今天开始复习
 function addPoint(){
