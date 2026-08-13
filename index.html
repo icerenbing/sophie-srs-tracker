@@ -125,6 +125,7 @@
   table.ov td .txt{color:#333;max-width:260px;word-break:break-all;}
   select.mini{padding:4px 7px;border:1px solid var(--line);border-radius:7px;font-size:12px;background:#fff;color:#445;cursor:pointer;}
   .foot{font-size:12px;color:var(--sub);text-align:center;margin-top:22px;line-height:1.7;}
+  .pnote{font-size:12px;color:#71777e;margin-top:4px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
   .modal-mask{position:fixed;inset:0;background:rgba(20,28,40,.45);display:none;align-items:center;justify-content:center;z-index:99;padding:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .modal-mask.on{display:flex;}
   .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;max-width:340px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.22);max-height:calc(100vh - 36px);max-height:calc(100dvh - 36px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -183,6 +184,7 @@
         <option value="P2">P2 可后</option>
       </select>
       <input type="file" id="inImg" accept="image/*" title="可上传题目/错题图片" style="flex:1;min-width:120px;font-size:13px;padding:8px 6px;border:1px dashed var(--line);border-radius:10px;background:#fbfcfe;">
+      <textarea id='inNote' rows='2' placeholder='备注：为什么做错 / 怎么解 / 易错点…（选填）' style='flex:1 1 100%;min-width:160px;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;color:#333;resize:vertical;font-family:inherit'></textarea>
       <button id="btnAdd">录入</button>
       <span id="addHint" style="color:var(--bad);font-size:12px;align-self:center;display:none;">知识点和主题都要填</span>
     </div>
@@ -368,8 +370,12 @@ function saveCloudToken(){
 // 合并两端数据：知识点按 id 去重（两端各录各的都保留，不丢）；主题取进度更深的；科目去重合并
 function mergeState(a,b){
   const pts={};
-  (a.points||[]).forEach(p=>pts[p.id]=p);
-  (b.points||[]).forEach(p=>pts[p.id]=p);
+  const put=(p)=>{ const cur=pts[p.id];
+    if(cur){ const note=(cur.note&&cur.note.length>=(p.note||"").length)?cur.note:(p.note||cur.note);
+      pts[p.id]=Object.assign({},cur,p,{note:note||null}); }
+    else pts[p.id]=p; };
+  (a.points||[]).forEach(put);
+  (b.points||[]).forEach(put);
   const th={};
   const acc=(src)=>{ for(const k in (src.themes||{})){ const t=src.themes[k]; const old=th[k];
     if(!old || (t.mastery||0)>(old.mastery||0) || ((t.mastery||0)===(old.mastery||0)&&(t.iv||0)>(old.iv||0))) th[k]=t; } };
@@ -475,17 +481,18 @@ function addPoint(){
   let track=(trackSel==="__custom__"?document.getElementById("inTrack").value.trim():trackSel);
   if(!track) track="其他";
   const prio=document.getElementById("inPrio").value;
+  const note=document.getElementById("inNote").value.trim();
   if(!TRACKS.includes(track) && !(state.tracks||[]).includes(track)){ state.tracks.push(track); refillTracks(); }
   const file=document.getElementById("inImg").files[0];
   const finish=(img)=>{
-    state.points.push({ id:uid(), text, theme, track, created:today(), img:img||null });
+    state.points.push({ id:uid(), text, theme, track, created:today(), img:img||null, note:note||null });
     const t = state.themes[theme];
     if(!t){ state.themes[theme]={ status:"active", due:today(), iv:0, mastery:0, history:[], priority:prio }; }
     else if(t.status==="grad"){ t.status="active"; t.due=today(); t.iv=0; }
     document.getElementById("inText").value="";
     document.getElementById("inThemeSel").value=""; document.getElementById("inTheme").value=""; document.getElementById("inTheme").style.display="none";
     document.getElementById("inTrackSel").value=""; document.getElementById("inTrack").value=""; document.getElementById("inTrack").style.display="none";
-    document.getElementById("inImg").value="";
+    document.getElementById("inImg").value=""; document.getElementById("inNote").value="";
     refillThemes(); refillTracks();
     save(); render();
   };
@@ -610,7 +617,7 @@ function render(){
       '<span class="ttl">'+esc(n)+'</span><span class="due">已复习'+(th.history?th.history.length:0)+'次</span>'+
       '<button class="mini" style="margin-left:6px" onclick="deferOne(\''+esc(n)+'\')">顺延+1天</button>'+
       prioSelect(n,th.priority)+'</div>'+
-      '<div class="pts">'+pts.map(p=>'<div>'+esc(p.text)+(p.img?'<br><img class="thumb" src="'+p.img+'" onclick="viewImg(\''+p.img+'\')">':"")+'</div>').join("")+'</div>'+
+      '<div class="pts">'+pts.map(p=>'<div>'+esc(p.text)+(p.note?'<div class="pnote">'+esc(p.note)+'</div>':"")+(p.img?'<br><img class="thumb" src="'+p.img+'" onclick="viewImg(\''+p.img+'\')">':"")+'</div>').join("")+'</div>'+
       '<div style="margin:6px 0 6px;font-size:12px;color:#71777e">掌握度：'+masteryBar(th.mastery)+
         (th.history?'<div style="margin-top:3px">'+histTrail(th.history)+'</div>':"")+'</div>'+
       '<div class="acts"><button class="bad" onclick="reviewTheme(\''+esc(n)+'\',0)">😣 还不会</button>'+
@@ -643,7 +650,7 @@ function render(){
       rows.map(r=>{
         const rev = r.th?(r.th.history?r.th.history.length:0):0;
         const stChip = '<span class="chip '+r.st.cls+'">'+r.st.txt+'</span>';
-        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+masteryBar(r.m)+'</td><td>'+stChip+'</td></tr>';
+        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+masteryBar(r.m)+'</td><td>'+stChip+'</td></tr>';
       }).join("");
   }
 
