@@ -126,6 +126,13 @@
   select.mini{padding:4px 7px;border:1px solid var(--line);border-radius:7px;font-size:12px;background:#fff;color:#445;cursor:pointer;}
   .foot{font-size:12px;color:var(--sub);text-align:center;margin-top:22px;line-height:1.7;}
   .pnote{font-size:12px;color:#71777e;margin-top:4px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+  /* ③ 总览每行的「修改 / 删除」操作 */
+  table.ov td .ops{white-space:nowrap;}
+  table.ov td .ops button{border:none;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer;font-family:inherit;margin-right:6px;}
+  table.ov td .ops .ed{background:#eef1f4;color:#3a6fd0;}
+  table.ov td .ops .ed:hover{background:#e2e8f5;}
+  table.ov td .ops .dl{background:#fdecea;color:#e0533d;}
+  table.ov td .ops .dl:hover{background:#fbe0dc;}
   .modal-mask{position:fixed;inset:0;background:rgba(20,28,40,.45);display:none;align-items:center;justify-content:center;z-index:99;padding:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .modal-mask.on{display:flex;}
   .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;max-width:340px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.22);max-height:calc(100vh - 36px);max-height:calc(100dvh - 36px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -276,6 +283,26 @@
     </div>
   </div>
 </div>
+
+<div class="modal-mask" id="editMask">
+  <div class="modal" style="max-width:384px">
+    <p style="font-weight:600;margin:0 0 10px">✏️ 修改知识点</p>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <input type="text" id="editText" placeholder="知识点 / 易错题…" style="padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;">
+      <select id="editThemeSel" onchange="syncEditCustom()" style="padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;"></select>
+      <input type="text" id="editTheme" placeholder="输入新主题…" style="display:none;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;">
+      <select id="editTrackSel" onchange="syncEditCustom()" style="padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;"></select>
+      <input type="text" id="editTrack" placeholder="输入新科目…" style="display:none;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:14px;">
+      <textarea id="editNote" rows="2" placeholder="备注：为什么做错 / 怎么解 / 易错点…（选填）" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;resize:vertical;font-family:inherit"></textarea>
+      <div style="font-size:12px;color:var(--sub)">换图（不重选则保留原图）：<input type="file" id="editImg" accept="image/*" style="font-size:12px;"></div>
+    </div>
+    <div class="mrow" style="margin-top:14px">
+      <button onclick="closeEdit()">取消</button>
+      <button class="primary" onclick="saveEdit()">保存修改</button>
+    </div>
+  </div>
+</div>
+<input type="hidden" id="editId">
 
 <script>
 const TRACKS = ["语文(课内)","数学(课内)","英语(课内)","阅读","学而思语文","学而思数学",
@@ -470,6 +497,80 @@ refillTracks(); refillThemes();
 // 首次打开不再自动塞示例：任何设备第一次打开都是干净空表；想看演示点「🎬 载入示例数据」即可
 
 
+// 修改 / 删除知识点：总览每行「操作」列调用
+let editImgKeep = null;
+function refillEditThemes(){
+  const sel=document.getElementById("editThemeSel");
+  const names=Object.keys(state.themes).concat(PRESET_THEMES).filter((v,i,a)=>a.indexOf(v)===i).sort();
+  sel.innerHTML='<option value="">（选主题）</option>'+names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'<option value="__custom__">✏️ 新增自定义主题…</option>';
+}
+function refillEditTracks(){
+  const sel=document.getElementById("editTrackSel");
+  const names=allTracks().slice().sort();
+  sel.innerHTML='<option value="">（选科目）</option>'+names.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('')+'<option value="__custom__">✏️ 新增自定义科目…</option>';
+}
+function syncEditCustom(){
+  const ti=document.getElementById("editTheme");
+  if(document.getElementById("editThemeSel").value==="__custom__"){ ti.style.display=""; ti.focus(); } else { ti.style.display="none"; ti.value=""; }
+  const tr=document.getElementById("editTrack");
+  if(document.getElementById("editTrackSel").value==="__custom__"){ tr.style.display=""; tr.focus(); } else { tr.style.display="none"; tr.value=""; }
+}
+function editPoint(id){
+  const p=state.points.find(x=>x.id===id); if(!p) return;
+  document.getElementById("editId").value=id;
+  document.getElementById("editText").value=p.text||"";
+  refillEditThemes(); refillEditTracks();
+  const ts=document.getElementById("editThemeSel");
+  if(Object.keys(state.themes).includes(p.theme)||PRESET_THEMES.includes(p.theme)) ts.value=p.theme;
+  else { ts.value="__custom__"; document.getElementById("editTheme").value=p.theme; document.getElementById("editTheme").style.display=""; }
+  const trs=document.getElementById("editTrackSel");
+  if(allTracks().includes(p.track)) trs.value=p.track;
+  else { trs.value="__custom__"; document.getElementById("editTrack").value=p.track; document.getElementById("editTrack").style.display=""; }
+  document.getElementById("editNote").value=p.note||"";
+  document.getElementById("editImg").value="";
+  editImgKeep = p.img||null;
+  document.getElementById("editMask").classList.add("on");
+}
+function closeEdit(){ document.getElementById("editMask").classList.remove("on"); }
+function saveEdit(){
+  const id=document.getElementById("editId").value;
+  const p=state.points.find(x=>x.id===id); if(!p) return;
+  const text=document.getElementById("editText").value.trim();
+  const themeSel=document.getElementById("editThemeSel").value;
+  const theme=(themeSel==="__custom__"?document.getElementById("editTheme").value.trim():themeSel);
+  if(!text||!theme){ alert("知识点和主题都要填"); return; }
+  const trackSel=document.getElementById("editTrackSel").value;
+  let track=(trackSel==="__custom__"?document.getElementById("editTrack").value.trim():trackSel);
+  if(!track) track="其他";
+  const note=document.getElementById("editNote").value.trim();
+  if(!TRACKS.includes(track)&&!(state.tracks||[]).includes(track)){ state.tracks.push(track); }
+  const oldTheme=p.theme;
+  const finish=(img)=>{
+    p.text=text; p.theme=theme; p.track=track; p.note=note||null; p.img=img;
+    if(theme!==oldTheme){
+      if(!state.themes[theme]) state.themes[theme]={status:"active",due:today(),iv:0,mastery:0,history:[],priority:"P1"};
+      const left=state.points.some(q=>q.id!==id&&q.theme===oldTheme);
+      if(!left&&state.themes[oldTheme]) delete state.themes[oldTheme];
+    }
+    refillThemes(); refillTracks();
+    document.getElementById("editMask").classList.remove("on");
+    save(); render();
+  };
+  const file=document.getElementById("editImg").files[0];
+  if(file){ const r=new FileReader(); r.onload=()=>finish(r.result); r.readAsDataURL(file); }
+  else finish(editImgKeep);
+}
+function delPoint(id){
+  const p=state.points.find(x=>x.id===id); if(!p) return;
+  myConfirm("确定删除这个知识点？", ()=>{
+    const th=p.theme;
+    state.points=state.points.filter(x=>x.id!==id);
+    const left=state.points.some(q=>q.theme===th);
+    if(!left&&state.themes[th]) delete state.themes[th];
+    save(); render();
+  });
+}
+
 // 录入即学习：点入库 -> 主题立即建立并今天开始复习
 function addPoint(){
   const text=document.getElementById("inText").value.trim();
@@ -489,6 +590,7 @@ function addPoint(){
     const t = state.themes[theme];
     if(!t){ state.themes[theme]={ status:"active", due:today(), iv:0, mastery:0, history:[], priority:prio }; }
     else if(t.status==="grad"){ t.status="active"; t.due=today(); t.iv=0; }
+    else if(t.due>today()){ t.due=today(); }   // 录入新错题 → 该主题今天也要复习（录入即学习；只提前、不推后）
     document.getElementById("inText").value="";
     document.getElementById("inThemeSel").value=""; document.getElementById("inTheme").value=""; document.getElementById("inTheme").style.display="none";
     document.getElementById("inTrackSel").value=""; document.getElementById("inTrack").value=""; document.getElementById("inTrack").style.display="none";
@@ -646,11 +748,12 @@ function render(){
       if(sortMode==="recent") return b.i-a.i;
       return b.pr-a.pr || a.m-b.m || b.i-a.i;   // mastery / prio 都薄弱/高优先级排前
     });
-    ov.innerHTML = '<tr><th>知识点</th><th>主题</th><th>科目</th><th>优先级</th><th>复习次数</th><th>当前熟练度</th><th>状态</th></tr>' +
+    ov.innerHTML = '<tr><th>知识点</th><th>主题</th><th>科目</th><th>优先级</th><th>复习次数</th><th>当前熟练度</th><th>状态</th><th>操作</th></tr>' +
       rows.map(r=>{
         const rev = r.th?(r.th.history?r.th.history.length:0):0;
         const stChip = '<span class="chip '+r.st.cls+'">'+r.st.txt+'</span>';
-        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+masteryBar(r.m)+'</td><td>'+stChip+'</td></tr>';
+        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+masteryBar(r.m)+'</td><td>'+stChip+'</td>'+
+          '<td class="ops"><button class="ed" onclick="editPoint(\''+r.p.id+'\')">✏️ 修改</button><button class="dl" onclick="delPoint(\''+r.p.id+'\')">🗑 删除</button></td></tr>';
       }).join("");
   }
 
