@@ -625,6 +625,8 @@ function masteryBar(m){ const mi=masteryInfo(m); let seg=""; for(let i=0;i<5;i++
 // 熟练度(0-5) → 与复习按钮一致的 4 档标签，便于统一对比
 function mastery4(m){ m=m||0; const map=[{lbl:"还不会",emoji:"😣",cls:"p0"},{lbl:"不太会",emoji:"😐",cls:"p1"},{lbl:"基本会",emoji:"🙂",cls:"p2"},{lbl:"很熟练",emoji:"😎",cls:"grad"}]; const idx=m<=1?0:m===2?1:m===3?2:3; return map[idx]; }
 function masteryChip(m){ const x=mastery4(m); return '<span class="chip '+x.cls+'">'+x.emoji+' '+x.lbl+'</span>'; }
+// 直接按复习档位(0-3)出标签：与复习按钮严格对应，点哪档显示哪档
+function chipFromLevel(l){ const map=[{lbl:"还不会",emoji:"😣",cls:"p0"},{lbl:"不太会",emoji:"😐",cls:"p1"},{lbl:"基本会",emoji:"🙂",cls:"p2"},{lbl:"很熟练",emoji:"😎",cls:"grad"}]; const x=map[Math.max(0,Math.min(3,l||0))]; return '<span class="chip '+x.cls+'">'+x.emoji+' '+x.lbl+'</span>'; }
 function histTrail(h){ if(!h||!h.length) return ""; const ic=["😣","😐","🙂","😎"]; return "轨迹："+h.slice(-6).map(x=>ic[x.level]+x.date.slice(5)).join(" "); }
 // 一个知识点当前的掌握标记：取所属主题最近一次复习标记；未复习过视为「还不会」
 function pointLevel(p){ const th=state.themes[p.theme]; if(!th||!th.history||!th.history.length) return 0; return th.history[th.history.length-1].level; }
@@ -743,19 +745,19 @@ function render(){
     let rows = state.points.map((p,i)=>{
       const th=state.themes[p.theme];
       const st=pointStatus(th,t);
-      return { p, th, st, m: th?th.mastery:0, pr: prioRank(th?th.priority:null), i };
+      return { p, th, st, m: th?th.mastery:0, lvl: pointLevel(p), pr: prioRank(th?th.priority:null), i };
     });
     if(filterOv) rows = rows.filter(r=>r.p.theme===filterOv);
     if(filterOvTrack) rows = rows.filter(r=>r.p.track===filterOvTrack);
     rows.sort((a,b)=>{
       if(sortMode==="recent") return b.i-a.i;
-      return b.pr-a.pr || a.m-b.m || b.i-a.i;   // mastery / prio 都薄弱/高优先级排前
+      return b.pr-a.pr || a.lvl-b.lvl || b.i-a.i;   // 档位(薄弱优先) / 优先级 排前
     });
     ov.innerHTML = '<tr><th>知识点</th><th>主题</th><th>科目</th><th>优先级</th><th>复习次数</th><th>当前熟练度</th><th>状态</th><th>操作</th></tr>' +
       rows.map(r=>{
         const rev = r.th?(r.th.history?r.th.history.length:0):0;
         const stChip = '<span class="chip '+r.st.cls+'">'+r.st.txt+'</span>';
-        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+masteryChip(r.m)+'</td><td>'+stChip+'</td>'+
+        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+chipFromLevel(r.lvl)+'</td><td>'+stChip+'</td>'+
           '<td class="ops"><button class="ed" onclick="editPoint(\''+r.p.id+'\')">✏️ 修改</button><button class="dl" onclick="delPoint(\''+r.p.id+'\')">🗑 删除</button></td></tr>';
       }).join("");
   }
