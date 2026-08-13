@@ -124,15 +124,16 @@
   table.ov tr:hover{background:#fafbfd;}
   table.ov td .txt{color:#333;max-width:260px;word-break:break-all;}
   select.mini{padding:4px 7px;border:1px solid var(--line);border-radius:7px;font-size:12px;background:#fff;color:#445;cursor:pointer;}
-  .foot{font-size:12px;color:var(--sub);text-align:center;margin-top:22px;line-height:1.7;}
+  .foot{font-size:12px;color:var(--sub);text-align:center;max-width:560px;margin:22px auto 0;line-height:1.7;}
   .pnote{font-size:12px;color:#71777e;margin-top:4px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
-  /* ③ 总览每行的「修改 / 删除」操作（圆形图标按钮，更简洁） */
-  table.ov td .ops{display:flex;gap:6px;white-space:nowrap;}
-  table.ov td .ops button{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:9px;font-size:14px;cursor:pointer;transition:.15s;font-family:inherit;}
-  table.ov td .ops .ed{background:#eaf0fb;color:#3a6fd0;}
-  table.ov td .ops .ed:hover{background:#dde7f7;transform:translateY(-1px);}
-  table.ov td .ops .dl{background:#fdeceb;color:#e0533d;}
-  table.ov td .ops .dl:hover{background:#fbd9d6;transform:translateY(-1px);}
+  /* ③ 总览每行的「修改 / 删除」操作（干净图标按钮） */
+  table.ov td .ops{display:flex;gap:8px;white-space:nowrap;}
+  table.ov td .ops button{width:38px;height:38px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;transition:.15s;font-family:inherit;}
+  table.ov td .ops button svg{width:18px;height:18px;display:block;}
+  table.ov td .ops .ed{border-color:#bcd2f5;color:#2f6fd6;}
+  table.ov td .ops .ed:hover{background:#eef4fe;border-color:#a9c4f0;transform:translateY(-1px);}
+  table.ov td .ops .dl{border-color:#f1c4bd;color:#d9533f;}
+  table.ov td .ops .dl:hover{background:#fdecea;border-color:#ecb3aa;transform:translateY(-1px);}
   .modal-mask{position:fixed;inset:0;background:rgba(20,28,40,.45);display:none;align-items:center;justify-content:center;z-index:99;padding:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .modal-mask.on{display:flex;}
   .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;max-width:340px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.22);max-height:calc(100vh - 36px);max-height:calc(100dvh - 36px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -757,8 +758,8 @@ function render(){
       rows.map(r=>{
         const rev = r.th?(r.th.history?r.th.history.length:0):0;
         const stChip = '<span class="chip '+r.st.cls+'">'+r.st.txt+'</span>';
-        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+chipFromLevel(r.lvl)+'</td><td>'+stChip+'</td>'+
-          '<td class="ops"><button class="ed" onclick="editPoint(\''+r.p.id+'\')">✏️ 修改</button><button class="dl" onclick="delPoint(\''+r.p.id+'\')">🗑 删除</button></td></tr>';
+        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+(r.th&&r.th.history&&r.th.history.length? chipFromLevel(r.lvl) : '<span class="chip" style="background:#eef1f4;color:#8a929b">🆕 未复习</span>')+'</td><td>'+stChip+'</td>'+
+          '<td class="ops"><button class="ed" title="修改" onclick="editPoint(\''+r.p.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button><button class="dl" title="删除" onclick="delPoint(\''+r.p.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td></tr>';
       }).join("");
   }
 
@@ -777,5 +778,6 @@ document.getElementById("inTheme").addEventListener("keydown",e=>{ if(e.key==="E
 
 render();
 </script>
+<div class="foot">Sophie错题本 · 数据存本机浏览器 · 当前版本 v2026.08.13.5</div>
 </body>
 </html>
