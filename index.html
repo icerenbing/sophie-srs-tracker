@@ -126,13 +126,13 @@
   select.mini{padding:4px 7px;border:1px solid var(--line);border-radius:7px;font-size:12px;background:#fff;color:#445;cursor:pointer;}
   .foot{font-size:12px;color:var(--sub);text-align:center;margin-top:22px;line-height:1.7;}
   .pnote{font-size:12px;color:#71777e;margin-top:4px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
-  /* ③ 总览每行的「修改 / 删除」操作 */
-  table.ov td .ops{white-space:nowrap;}
-  table.ov td .ops button{border:none;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer;font-family:inherit;margin-right:6px;}
-  table.ov td .ops .ed{background:#eef1f4;color:#3a6fd0;}
-  table.ov td .ops .ed:hover{background:#e2e8f5;}
-  table.ov td .ops .dl{background:#fdecea;color:#e0533d;}
-  table.ov td .ops .dl:hover{background:#fbe0dc;}
+  /* ③ 总览每行的「修改 / 删除」操作（圆形图标按钮，更简洁） */
+  table.ov td .ops{display:flex;gap:6px;white-space:nowrap;}
+  table.ov td .ops button{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:9px;font-size:14px;cursor:pointer;transition:.15s;font-family:inherit;}
+  table.ov td .ops .ed{background:#eaf0fb;color:#3a6fd0;}
+  table.ov td .ops .ed:hover{background:#dde7f7;transform:translateY(-1px);}
+  table.ov td .ops .dl{background:#fdeceb;color:#e0533d;}
+  table.ov td .ops .dl:hover{background:#fbd9d6;transform:translateY(-1px);}
   .modal-mask{position:fixed;inset:0;background:rgba(20,28,40,.45);display:none;align-items:center;justify-content:center;z-index:99;padding:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .modal-mask.on{display:flex;}
   .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;max-width:340px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.22);max-height:calc(100vh - 36px);max-height:calc(100dvh - 36px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -622,6 +622,9 @@ function reviewTheme(name, level){
 function masteryInfo(m){ m=m||0; const lbl=m>=4?"扎实":m>=2?"摇摆":"薄弱"; const col=m>=4?"#2e9e5b":m>=2?"#e0a020":"#e0533d"; return {lbl,col}; }
 function masteryBar(m){ const mi=masteryInfo(m); let seg=""; for(let i=0;i<5;i++) seg+='<span style="display:inline-block;width:13px;height:8px;border-radius:2px;margin-right:2px;background:'+(i<(m||0)?mi.col:"#e6e8eb")+'"></span>';
   return seg+' <b style="font-size:12px;color:'+mi.col+'">'+mi.lbl+'</b>'; }
+// 熟练度(0-5) → 与复习按钮一致的 4 档标签，便于统一对比
+function mastery4(m){ m=m||0; const map=[{lbl:"还不会",emoji:"😣",cls:"p0"},{lbl:"不太会",emoji:"😐",cls:"p1"},{lbl:"基本会",emoji:"🙂",cls:"p2"},{lbl:"很熟练",emoji:"😎",cls:"grad"}]; const idx=m<=1?0:m===2?1:m===3?2:3; return map[idx]; }
+function masteryChip(m){ const x=mastery4(m); return '<span class="chip '+x.cls+'">'+x.emoji+' '+x.lbl+'</span>'; }
 function histTrail(h){ if(!h||!h.length) return ""; const ic=["😣","😐","🙂","😎"]; return "轨迹："+h.slice(-6).map(x=>ic[x.level]+x.date.slice(5)).join(" "); }
 // 一个知识点当前的掌握标记：取所属主题最近一次复习标记；未复习过视为「还不会」
 function pointLevel(p){ const th=state.themes[p.theme]; if(!th||!th.history||!th.history.length) return 0; return th.history[th.history.length-1].level; }
@@ -752,7 +755,7 @@ function render(){
       rows.map(r=>{
         const rev = r.th?(r.th.history?r.th.history.length:0):0;
         const stChip = '<span class="chip '+r.st.cls+'">'+r.st.txt+'</span>';
-        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+masteryBar(r.m)+'</td><td>'+stChip+'</td>'+
+        return '<tr><td class="txt">'+esc(r.p.text)+(r.p.note?'<div class="pnote">'+esc(r.p.note)+'</div>':"")+(r.p.img?'<br><img class="thumb" src="'+r.p.img+'" onclick="viewImg(\''+r.p.img+'\')">':"")+'</td><td>'+esc(r.p.theme)+'</td><td>'+esc(r.p.track)+'</td><td>'+prioSelect(r.p.theme, r.th?r.th.priority:null)+'</td><td>'+rev+'</td><td>'+masteryChip(r.m)+'</td><td>'+stChip+'</td>'+
           '<td class="ops"><button class="ed" onclick="editPoint(\''+r.p.id+'\')">✏️ 修改</button><button class="dl" onclick="delPoint(\''+r.p.id+'\')">🗑 删除</button></td></tr>';
       }).join("");
   }
